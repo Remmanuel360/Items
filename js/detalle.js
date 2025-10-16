@@ -1,23 +1,28 @@
-async function detalle(pokemon){
-    document.getElementById("root").innerHTML = "Detalle"
+async function detalle(item) {
+  document.getElementById("root").innerHTML = "Cargando detalle...";
 
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`);
-    const data = await res.json();
+  // Llamada al API de D&D 5e
+  const res = await fetch(`https://www.dnd5eapi.co/api/2014/magic-items/${item}`);
+  const data = await res.json();
 
-    console.log(data.forms[0].name)
-    console.log(data.id)
+  console.log(data.name);
+  console.log(data.rarity);
+  console.log(data.equipment_category);
 
-    document.getElementById("root").innerHTML=`
+  // Algunos objetos tienen descripción en forma de array
+  const descripcion = data.desc ? data.desc.join("<br><br>") : "Sin descripción disponible.";
+
+  // Mostrar detalle en la página
+  document.getElementById("root").innerHTML = `
     <section class="c-detalle">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${data.id}.png" alt="${data.name}" height="120" width="auto">
-        <p>${data.name}</p>
-        <p>${data.id}</p>
-        <p>Altura: ${data.height / 10} m / Peso: ${data.weight / 10} kg</p>
-        <p>hp: ${data.stats[0].base_stat}</p>
-        <p>Velocidad: ${data.stats[5].base_stat}</p>
-        <p>Ataque: ${data.stats[1].base_stat} Defensa: ${data.stats[2].base_stat}</p>
-        <p>Ataque Especial: ${data.stats[3].base_stat} Defensa Especial: ${data.stats[4].base_stat}</p>
-        `
+      <h2>${data.name}</h2>
+      <p><strong>Rareza:</strong> ${data.rarity || "Desconocida"}</p>
+      <p><strong>Categoría:</strong> ${data.equipment_category?.name || "No especificada"}</p>
+      <p><strong>Descripción:</strong></p>
+      <p>${descripcion}</p>
+      <button onclick="home()">Volver</button>
+    </section>
+  `;
 }
 
 

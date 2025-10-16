@@ -1,35 +1,36 @@
-let pokemones =[]
+let objetosMagicos = [];
 
-async function Conexion(filtrotipo){
-     if(filtrotipo == "All"){
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=1024`);
-    const data = await res.json();
-    return data.results;
-  }else{
-    const res = await fetch(`https://pokeapi.co/api/v2/type/${filtrotipo}`);
-    const data = await res.json();
+async function Conexion(filtro) {
+  const res = await fetch(`https://www.dnd5eapi.co/api/2014/magic-items`);
+  const data = await res.json();
 
-    const pokemonesTipo = [];
-    for (let i = 0; i < data.pokemon.length; i++) {
-      pokemonesTipo.push(data.pokemon[i].pokemon);
-    }
-    return pokemonesTipo;
+  // data.results contiene todos los objetos mágicos
+  let items = data.results;
+
+  // Si se aplica un filtro, filtramos por nombre
+  if (filtro && filtro !== "All") {
+    items = items.filter(item =>
+      item.name.toLowerCase().includes(filtro.toLowerCase())
+    );
   }
 
+  return items;
 }
-   // Cargar todos los Pokémon al iniciar
+
+// Cargar todos los objetos mágicos al iniciar
 async function General() {
-    if (pokemones.length === 0) {
-        pokemones = await Conexion("All");
-    }
-   home()
+  if (objetosMagicos.length === 0) {
+    objetosMagicos = await Conexion("All");
+  }
+  home(); // esta función debe mostrar los datos en la página
 }
 
-General()
+General();
 
-async function FiltroConexion(Elfiltro){
+// Función para aplicar un filtro desde el frontend
+async function FiltroConexion(filtro) {
   document.getElementById("la-lista").innerHTML = "";
-  pokemones = await Conexion(Elfiltro);
-  const listaHTML = generarLista(pokemones);
+  objetosMagicos = await Conexion(filtro);
+  const listaHTML = generarLista(objetosMagicos);
   document.getElementById("la-lista").innerHTML = listaHTML;
 }
