@@ -1,36 +1,81 @@
-let objetosMagicos = [];
+// conexion.js (reemplazar por completo)
 
-async function Conexion(filtro) {
-  const res = await fetch(`https://www.dnd5eapi.co/api/2014/magic-items`);
-  const data = await res.json();
+let items = []; // lista básica: { name, url }
+let itemsDetalladosCache = {}; // cache por id -> detalle completo
 
-  // data.results contiene todos los objetos mágicos
-  let items = data.results;
-
-  // Si se aplica un filtro, filtramos por nombre
-  if (filtro && filtro !== "All") {
-    items = items.filter(item =>
-      item.name.toLowerCase().includes(filtro.toLowerCase())
-    );
+// Obtener lista básica (si no está cargada)
+async function obtenerListaBase() {
+  if (items.length === 0) {
+    const res = await fetch("https://www.dnd5eapi.co/api/magic-items");
+    if (!res.ok) throw new Error("Error cargando lista base");
+    const data = await res.json();
+    items = data.results; // [{ name, url }, ...]
   }
-
   return items;
 }
 
-// Cargar todos los objetos mágicos al iniciar
-async function General() {
-  if (objetosMagicos.length === 0) {
-    objetosMagicos = await Conexion("All");
+/**
+ * Conexion(filtroCategory)
+ * - filtroCategory: "All" o el nombre de la categoría (por ejemplo "Armor", "Wondrous Item")
+ * - Si "All" devuelve la lista básica (rápida).
+ * - Si otra cosa, devuelve items detallados que coinciden con esa categoría.
+ */
+async function Conexion(filtroCategory = "All") {
+  await obtenerListaBase();
+
+  if (filtroCategory === "All") {
+    return items;
   }
-  home(); // esta función debe mostrar los datos en la página
+
+  const filtrados = [];
+
+  // Recorremos la lista básica; por cada item obtenemos detalle (cacheado)
+  for (const it of items) {
+    const id = it.url.split("/").pop();
+
+    // Si no está en cache, lo traemos y guardamos
+    if (!itemsDetalladosCache[id]) {
+      try {
+        const r = await fetch(`https://www.dnd5eapi.co/api/magic-items/${id}`);
+        if (!r.ok) {
+          // si falla con este item, lo saltamos
+          console.warn("No se pudo cargar detalle de", id);
+          continue;
+        }
+        const detalle = await r.json();
+        // Guardar también el base para identificarlo si hace falta
+        detalle._base = it;
+        itemsDetalladosCache[id] = detalle;
+      } catch (err) {
+        console.warn("Error fetch detalle:", err, id);
+        continue;
+      }
+    }
+
+    const detalle = itemsDetalladosCache[id];
+
+    // equipment_category puede ser objeto o undefined
+    const cat = detalle.equipment_category;
+    const catName = cat ? (typeof cat === "string" ? cat : cat.name) : "";
+
+    if (catName.toLowerCase() === filtroCategory.toLowerCase()) {
+      filtrados.push(detalle);
+    }
+  }
+
+  return filtrados;
 }
 
-General();
-
-// Función para aplicar un filtro desde el frontend
+// Función que llama la interfaz para filtrar y actualizar la lista (usada por home.js)
 async function FiltroConexion(filtro) {
-  document.getElementById("la-lista").innerHTML = "";
-  objetosMagicos = await Conexion(filtro);
-  const listaHTML = generarLista(objetosMagicos);
-  document.getElementById("la-lista").innerHTML = listaHTML;
+  const cont = document.getElementById("la-lista");
+  if (!cont) return;
+  cont.innerHTML = "Cargando...";
+  try {
+    const resultado = await Conexion(filtro);
+    cont.innerHTML = generarLista(resultado);
+  } catch (err) {
+    console.error("Error en FiltroConexion:", err);
+    cont.innerHTML = "<p>Error al filtrar.</p>";
+  }
 }
